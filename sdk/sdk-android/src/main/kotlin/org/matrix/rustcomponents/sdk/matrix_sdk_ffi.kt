@@ -2283,6 +2283,8 @@ internal open class UniffiVTableCallbackInterfaceWidgetCapabilitiesProvider(
 
 
 
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -2398,7 +2400,7 @@ internal interface UniffiLib : Library {
     ): Long
     fun uniffi_matrix_sdk_ffi_fn_method_client_homeserver(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
-    fun uniffi_matrix_sdk_ffi_fn_method_client_homeserver_login_details(`ptr`: Pointer,
+    fun uniffi_matrix_sdk_ffi_fn_method_client_homeserver_login_details(`ptr`: Pointer,`isGetDetailsForOidc`: Byte,
     ): Long
     fun uniffi_matrix_sdk_ffi_fn_method_client_ignore_user(`ptr`: Pointer,`userId`: RustBuffer.ByValue,
     ): Long
@@ -3358,6 +3360,8 @@ internal interface UniffiLib : Library {
     ): RustBuffer.ByValue
     fun uniffi_matrix_sdk_ffi_fn_func_parse_matrix_entity_from(`uri`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_matrix_sdk_ffi_fn_func_register(`homeserverUrl`: RustBuffer.ByValue,`username`: RustBuffer.ByValue,`password`: RustBuffer.ByValue,`deviceId`: RustBuffer.ByValue,`deviceName`: RustBuffer.ByValue,
+    ): Long
     fun uniffi_matrix_sdk_ffi_fn_func_room_alias_name_from_room_display_name(`roomName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_matrix_sdk_ffi_fn_func_sdk_git_sha(uniffi_out_err: UniffiRustCallStatus, 
@@ -3515,6 +3519,8 @@ internal interface UniffiLib : Library {
     fun uniffi_matrix_sdk_ffi_checksum_func_new_virtual_element_call_widget(
     ): Short
     fun uniffi_matrix_sdk_ffi_checksum_func_parse_matrix_entity_from(
+    ): Short
+    fun uniffi_matrix_sdk_ffi_checksum_func_register(
     ): Short
     fun uniffi_matrix_sdk_ffi_checksum_func_room_alias_name_from_room_display_name(
     ): Short
@@ -4441,6 +4447,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_matrix_sdk_ffi_checksum_func_parse_matrix_entity_from() != 49710.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_matrix_sdk_ffi_checksum_func_register() != 54948.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_matrix_sdk_ffi_checksum_func_room_alias_name_from_room_display_name() != 65010.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -4546,7 +4555,7 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_matrix_sdk_ffi_checksum_method_client_homeserver() != 26427.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_matrix_sdk_ffi_checksum_method_client_homeserver_login_details() != 63487.toShort()) {
+    if (lib.uniffi_matrix_sdk_ffi_checksum_method_client_homeserver_login_details() != 40506.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_matrix_sdk_ffi_checksum_method_client_ignore_user() != 14588.toShort()) {
@@ -6382,7 +6391,7 @@ public interface ClientInterface {
     /**
      * Information about login options for the client's homeserver.
      */
-    suspend fun `homeserverLoginDetails`(): HomeserverLoginDetails
+    suspend fun `homeserverLoginDetails`(`isGetDetailsForOidc`: kotlin.Boolean): HomeserverLoginDetails
     
     suspend fun `ignoreUser`(`userId`: kotlin.String)
     
@@ -7294,12 +7303,12 @@ open class Client: Disposable, AutoCloseable, ClientInterface {
      * Information about login options for the client's homeserver.
      */
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-    override suspend fun `homeserverLoginDetails`() : HomeserverLoginDetails {
+    override suspend fun `homeserverLoginDetails`(`isGetDetailsForOidc`: kotlin.Boolean) : HomeserverLoginDetails {
         return uniffiRustCallAsync(
         callWithPointer { thisPtr ->
             UniffiLib.INSTANCE.uniffi_matrix_sdk_ffi_fn_method_client_homeserver_login_details(
                 thisPtr,
-                
+                FfiConverterBoolean.lower(`isGetDetailsForOidc`),
             )
         },
         { future, callback, continuation -> UniffiLib.INSTANCE.ffi_matrix_sdk_ffi_rust_future_poll_pointer(future, callback, continuation) },
@@ -24870,6 +24879,41 @@ public object FfiConverterTypeAuthDataPasswordDetails: FfiConverterRustBuffer<Au
 
 
 
+data class AuthDataRegistrationToken (
+    /**
+     * The registration token.
+     */
+    var `token`: kotlin.String, 
+    /**
+     * The value of the session key given by the homeserver, if any.
+     */
+    var `session`: kotlin.String?
+) {
+    
+    companion object
+}
+
+public object FfiConverterTypeAuthDataRegistrationToken: FfiConverterRustBuffer<AuthDataRegistrationToken> {
+    override fun read(buf: ByteBuffer): AuthDataRegistrationToken {
+        return AuthDataRegistrationToken(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: AuthDataRegistrationToken) = (
+            FfiConverterString.allocationSize(value.`token`) +
+            FfiConverterOptionalString.allocationSize(value.`session`)
+    )
+
+    override fun write(value: AuthDataRegistrationToken, buf: ByteBuffer) {
+            FfiConverterString.write(value.`token`, buf)
+            FfiConverterOptionalString.write(value.`session`, buf)
+    }
+}
+
+
+
 data class ClientProperties (
     /**
      * The client_id provides the widget with the option to behave differently
@@ -26551,6 +26595,35 @@ public object FfiConverterTypeReceipt: FfiConverterRustBuffer<Receipt> {
 
     override fun write(value: Receipt, buf: ByteBuffer) {
             FfiConverterOptionalTypeTimestamp.write(value.`timestamp`, buf)
+    }
+}
+
+
+
+data class RegisterResponse (
+    var `userId`: kotlin.String, 
+    var `deviceId`: kotlin.String
+) {
+    
+    companion object
+}
+
+public object FfiConverterTypeRegisterResponse: FfiConverterRustBuffer<RegisterResponse> {
+    override fun read(buf: ByteBuffer): RegisterResponse {
+        return RegisterResponse(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RegisterResponse) = (
+            FfiConverterString.allocationSize(value.`userId`) +
+            FfiConverterString.allocationSize(value.`deviceId`)
+    )
+
+    override fun write(value: RegisterResponse, buf: ByteBuffer) {
+            FfiConverterString.write(value.`userId`, buf)
+            FfiConverterString.write(value.`deviceId`, buf)
     }
 }
 
@@ -28756,6 +28829,14 @@ sealed class AuthData {
         companion object
     }
     
+    /**
+     * Registration token-based authentication (`m.login.registration_token`).
+     */
+    data class RegistrationToken(
+        val v1: AuthDataRegistrationToken) : AuthData() {
+        companion object
+    }
+    
 
     
     companion object
@@ -28766,6 +28847,9 @@ public object FfiConverterTypeAuthData : FfiConverterRustBuffer<AuthData>{
         return when(buf.getInt()) {
             1 -> AuthData.Password(
                 FfiConverterTypeAuthDataPasswordDetails.read(buf),
+                )
+            2 -> AuthData.RegistrationToken(
+                FfiConverterTypeAuthDataRegistrationToken.read(buf),
                 )
             else -> throw RuntimeException("invalid enum value, something is very wrong!!")
         }
@@ -28779,6 +28863,13 @@ public object FfiConverterTypeAuthData : FfiConverterRustBuffer<AuthData>{
                 + FfiConverterTypeAuthDataPasswordDetails.allocationSize(value.`passwordDetails`)
             )
         }
+        is AuthData.RegistrationToken -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeAuthDataRegistrationToken.allocationSize(value.v1)
+            )
+        }
     }
 
     override fun write(value: AuthData, buf: ByteBuffer) {
@@ -28786,6 +28877,11 @@ public object FfiConverterTypeAuthData : FfiConverterRustBuffer<AuthData>{
             is AuthData.Password -> {
                 buf.putInt(1)
                 FfiConverterTypeAuthDataPasswordDetails.write(value.`passwordDetails`, buf)
+                Unit
+            }
+            is AuthData.RegistrationToken -> {
+                buf.putInt(2)
+                FfiConverterTypeAuthDataRegistrationToken.write(value.v1, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -42732,6 +42828,21 @@ public typealias FfiConverterTypeTimestamp = FfiConverterULong
     )
     }
     
+
+    @Throws(ClientException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+     suspend fun `register`(`homeserverUrl`: kotlin.String, `username`: kotlin.String, `password`: kotlin.String, `deviceId`: kotlin.String, `deviceName`: kotlin.String) : RegisterResponse {
+        return uniffiRustCallAsync(
+        UniffiLib.INSTANCE.uniffi_matrix_sdk_ffi_fn_func_register(FfiConverterString.lower(`homeserverUrl`),FfiConverterString.lower(`username`),FfiConverterString.lower(`password`),FfiConverterString.lower(`deviceId`),FfiConverterString.lower(`deviceName`),),
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_matrix_sdk_ffi_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_matrix_sdk_ffi_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_matrix_sdk_ffi_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterTypeRegisterResponse.lift(it) },
+        // Error FFI converter
+        ClientException.ErrorHandler,
+    )
+    }
 
         /**
          * Transforms a Room's display name into a valid room alias name.
